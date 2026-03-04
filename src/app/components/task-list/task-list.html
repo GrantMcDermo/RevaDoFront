@@ -1,0 +1,61 @@
+<h2>Your Tasks</h2>
+
+<!-- New Task Form -->
+
+<form #taskForm="ngForm" (ngSubmit)="createTask(taskForm)">
+  <label for="newTitle">Title</label>
+  <input type="text" id="newTitle" [(ngModel)]="newTitle" name="title" required>
+
+  <label for="newDescription">Description</label>
+  <input type="text" id="newDescription" [(ngModel)]="newDescription" name="description">
+
+  <button type="submit" [disabled]="taskForm.invalid">Create</button>
+</form>
+
+
+<hr>
+
+<!-- Task List -->
+@for (task of tasks; track task.id) {
+
+  <!-- Display Mode -->
+  @if (editingTaskId !== task.id) {
+    <div>
+      <h3 [style.text-decoration]="task.completed ? 'line-through' : 'none'">
+        {{ task.title }}
+      </h3>
+
+      <p>{{ task.description }}</p>
+
+      <button (click)="toggleComplete(task)">
+        {{ task.completed ? 'Undo' : 'Complete' }}
+      </button>
+
+      <button (click)="startEdit(task)">Edit</button>
+      <button (click)="deleteTask(task.id)">Delete</button>
+    </div>
+  }
+
+  <!-- Edit Mode -->
+  @if (editingTaskId === task.id) {
+    <div>
+      <label [for]="'editTitle-' + task.id">Title</label>
+      <input
+        [id]="'editTitle-' + task.id"
+        [(ngModel)]="editTitle"
+        placeholder="Edit title"
+      >
+
+      <label [for]="'editDesc-' + task.id">Description</label>
+      <input
+        [id]="'editDesc-' + task.id"
+        [(ngModel)]="editDescription"
+        placeholder="Edit description"
+      >
+
+      <button (click)="saveEdit(task)">Save</button>
+      <button (click)="cancelEdit()">Cancel</button>
+    </div>
+  }
+
+}
