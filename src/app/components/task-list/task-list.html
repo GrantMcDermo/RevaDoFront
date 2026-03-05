@@ -20,8 +20,8 @@
 
   <!-- Display Mode -->
   @if (editingTaskId() !== task.id) {
-    <div style="margin-bottom: 1rem;">
-      <h3 [style.text-decoration]="task.completed ? 'line-through' : 'none'">
+    <div class="task-container">
+      <h3 [class.completed]="task.completed">
         {{ task.title }}
       </h3>
 
@@ -33,7 +33,7 @@
 
       <button type="button" (click)="startEdit(task); $event.stopPropagation()">Edit</button>
       <button type="button" (click)="deleteTask(task.id); $event.stopPropagation()">Delete</button>
-      <div style="margin-top: 0.75rem; padding-left: 1rem;">
+      <div class="subtask-container">
         <h4>Subtasks</h4>
 
         @if (task.subtasks?.length) {
@@ -41,7 +41,7 @@
             @for (s of task.subtasks; track s.id) {
               <li>
                 @if (editingSubtaskId() !== s.id) {
-                  <span [style.text-decoration]="s.completed ? 'line-through' : 'none'">
+                  <span [class.completed]="s.completed">
                     {{s.title}} - {{s.description}}
                   </span>
 
@@ -83,7 +83,7 @@
           <p>No Subtasks yet.</p>
         }
 
-        <div style="margin-top: 0.5rem;">
+        <div class="subtask-create">
           <label [for]="'subTitle-' + task.id">Title</label>
           <input type="text" [id]="'subTitle-' + task.id" [name]="'subTitle-' + task.id"
           [(ngModel)]="newSubtaskTitle[task.id]"
@@ -108,7 +108,7 @@
 
   <!-- Edit Mode -->
   @if (editingTaskId() === task.id) {
-    <div style="margin-bottom: 1rem;">
+    <div class="task-container">
       <label [for]="'editTitle-' + task.id">Title</label>
       <input
         [id]="'editTitle-' + task.id"

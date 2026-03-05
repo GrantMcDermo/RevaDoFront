@@ -1,0 +1,31 @@
+/* spacing between tasks */
+.task-container {
+  margin-bottom: 1rem;
+}
+
+/* completed tasks + subtasks */
+.completed {
+  text-decoration: line-through;
+  opacity: 0.7;
+}
+
+/* subtask block */
+.subtask-container {
+  margin-top: 0.75rem;
+  padding-left: 1rem;
+}
+
+/* create subtask form */
+.subtask-create {
+  margin-top: 0.5rem;
+}
+
+/* optional: list spacing */
+ul {
+  margin: 0.5rem 0;
+  padding-left: 1rem;
+}
+
+li {
+  margin-bottom: 0.35rem;
+}
