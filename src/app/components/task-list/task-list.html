@@ -16,7 +16,7 @@
 <hr>
 
 <!-- Task List -->
-@for (task of tasks; track task.id) {
+@for (task of (tasks$ | async) ?? []; track task.id) {
 
   <!-- Display Mode -->
   @if (editingTaskId() !== task.id) {

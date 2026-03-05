@@ -1,19 +1,20 @@
-import { ChangeDetectorRef, Component, signal } from '@angular/core';
+import { Component, signal } from '@angular/core';
 import { FormsModule, NgForm } from '@angular/forms';
 import { Task } from '../../models/task';
-import { TaskService } from '../../services/task-service';
-import { SubtaskService } from '../../services/subtask-service';
+import { AsyncPipe } from '@angular/common';
 import { Subtask } from '../../models/subtask';
+import { TaskFacade } from '../../services/task-facade';
+import { Observable } from 'rxjs';
 
 @Component({
   selector: 'app-task-list',
   standalone: true,
-  imports: [FormsModule],
+  imports: [FormsModule, AsyncPipe],
   templateUrl: './task-list.html',
   styleUrl: './task-list.css',
 })
 export class TaskList {
-  tasks: Task[] = [];
+  tasks$!: Observable<Task[]>;
 
   newTitle = '';
   newDescription = '';
@@ -29,40 +30,18 @@ export class TaskList {
   editSubtaskTitle = '';
   editSubtaskDescription = '';
 
-  constructor(
-    private taskService: TaskService,
-    private subtaskService: SubtaskService,
-    private cdr: ChangeDetectorRef,
-  ) {}
+  constructor(private facade: TaskFacade) {}
 
   ngOnInit() {
-    this.loadTasks();
-  }
-
-  loadTasks() {
-    this.taskService.getTasks().subscribe({
-      next: (tasks) => {
-        this.tasks = tasks;
-        this.cdr.detectChanges(); // ✅ make list appear immediately
-      },
-      error: (err) => console.error('Load tasks failed:', err),
-    });
+    this.tasks$ = this.facade.tasks$;
+    this.facade.loadTasks().subscribe();
   }
 
   createTask(form: NgForm) {
     if (form.invalid) return;
-    this.taskService
-      .createTask({
-        title: this.newTitle,
-        description: this.newDescription,
-      })
-      .subscribe({
-        next: (task) => {
-          this.tasks.push(task);
-          form.resetForm();
-        },
-        error: (err) => console.error(err),
-      });
+    this.facade.createTask(this.newTitle, this.newDescription).subscribe({
+      next: () => form.resetForm(),
+    })
   }
 
   startEdit(task: Task) {
@@ -79,88 +58,32 @@ export class TaskList {
 
   saveEdit(task: Task) {
     const title = this.editTitle.trim();
-    const description = this.editDescription;
-
     if (!title) return;
 
-    this.tasks = this.tasks.map((t) => (t.id === task.id ? { ...t, title, description } : t));
-
-    this.taskService
-      .updateTask(task.id, {
-        title,
-        description,
-      })
-      .subscribe({
-        next: () => {
-          this.cancelEdit();
-          this.loadTasks();
-        },
-        error: (err) => {
-          console.error('Save failed:', err);
-          this.loadTasks();
-        },
-      });
+    this.facade.updateTask(task.id, title, this.editDescription).subscribe({
+      next: () => this.cancelEdit()
+    });
   }
 
   toggleComplete(task: Task) {
-    const previous = task.completed;
-    this.tasks = this.tasks.map((t) => (t.id === task.id ? { ...t, completed: !t.completed } : t));
-    this.taskService.markTaskComplete(task.id).subscribe({
-      next: () => {
-        this.loadTasks();
-      },
-      error: (err) => {
-        console.error('Toggle failed:', err);
-        this.tasks = this.tasks.map((t) => (t.id === task.id ? { ...t, completed: previous } : t));
-        this.loadTasks();
-      },
-    });
+    this.facade.toggleTaskComplete(task.id).subscribe();
   }
+
   deleteTask(id: string) {
-    this.tasks = this.tasks.filter((t) => t.id !== id);
-    this.taskService.deleteTask(id).subscribe({
-      next: () => {
-        this.loadTasks();
-      },
-      error: (err) => {
-        console.error('Delete failed:', err);
-        this.loadTasks();
-      },
-    });
+    this.facade.deleteTask(id).subscribe();
   }
 
   creatingSubtaskForTaskIds = new Set<string>();
   createSubtask(task: Task) {
     const title = (this.newSubtaskTitle[task.id] ?? '').trim();
     const description = this.newSubtaskDescription[task.id] ?? '';
-
     if (!title) return;
-
-    if (this.creatingSubtaskForTaskIds.has(task.id)) return;
-    this.creatingSubtaskForTaskIds.add(task.id);
-
-    this.subtaskService
-      .createSubtask(task.id, {
-        title,
-        description,
-      })
-      .subscribe({
-        next: (created) => {
-          this.tasks = this.tasks.map((t) =>
-            t.id === task.id ? { ...t, subtasks: [...(t.subtasks ?? []), created] } : t,
-          );
-          this.newSubtaskTitle[task.id] = '';
-          this.newSubtaskDescription[task.id] = '';
-          this.creatingSubtaskForTaskIds.delete(task.id);
-          this.cdr.detectChanges();
-          //this.loadTasks();
-        },
-        error: (err) => {
-          console.error('Create subtask failed:', err);
-          this.creatingSubtaskForTaskIds.delete(task.id);
-          this.loadTasks();
-        },
-      });
+    this.facade.createSubtask(task.id, title, description).subscribe({
+      next: () => {
+        this.newSubtaskTitle[task.id] = '';
+        this.newSubtaskDescription[task.id] = '';
+      }
+    });
   }
 
   startEditSubtask(subtask: Subtask) {
@@ -175,93 +98,19 @@ export class TaskList {
     this.editSubtaskDescription = '';
   }
 
-  saveEditSubtask(subtask: Subtask) {
+  saveEditSubtask(s: Subtask) {
     const title = this.editSubtaskTitle.trim();
     const description = this.editSubtaskDescription;
-
     if (!title) return;
 
-    // Optimistic update:
-    this.tasks = this.tasks.map((t) => ({
-      ...t,
-      subtasks: (t.subtasks ?? []).map((s) =>
-        s.id === subtask.id ? { ...s, title, description } : s,
-      ),
-    }));
-
-    this.cdr.detectChanges();
-
-    this.subtaskService
-      .updateSubtask(subtask.id, {
-        title,
-        description,
-      })
-      .subscribe({
-        next: (updated) => {
-          // If your endpoint returns the updated Subtask, prefer using it:
-          this.tasks = this.tasks.map((t) => ({
-            ...t,
-            subtasks: (t.subtasks ?? []).map((s) => (s.id === updated.id ? updated : s)),
-          }));
-
-          this.cancelEditSubtask();
-
-          this.cdr.detectChanges();
-
-          // Optional: keep backend truth if there are side effects
-          // this.loadTasks();
-        },
-        error: (err) => {
-          console.error('Update subtask failed:', err);
-          this.loadTasks();
-          this.cdr.detectChanges();
-        },
-      });
-  }
-  completeSubtask(subtask: Subtask) {
-    // optimistic toggle-like UI (if your endpoint only sets true, you can force true here)
-    this.tasks = this.tasks.map((t) => ({
-      ...t,
-      subtasks: (t.subtasks ?? []).map((s) =>
-        s.id === subtask.id ? { ...s, completed: !s.completed } : s,
-      ),
-    }));
-
-    this.cdr.detectChanges();
-
-    this.subtaskService.markComplete(subtask.id).subscribe({
-      next: () => {
-        this.loadTasks();
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('Complete subtask failed:', err);
-        this.loadTasks();
-        this.cdr.detectChanges();
-      },
+    this.facade.updateSubtask(s.id, title, description).subscribe({
+      next: () => this.cancelEditSubtask()
     });
   }
-  deleteSubtask(subtaskId: string) {
-    if (subtaskId.startsWith('temp-')) {
-      this.tasks = this.tasks.map((t) => ({
-        ...t,
-        subtasks: (t.subtasks ?? []).filter((s) => s.id !== subtaskId),
-      }));
-      return;
-    }
-
-    // optimistic remove
-    this.tasks = this.tasks.map((t) => ({
-      ...t,
-      subtasks: (t.subtasks ?? []).filter((s) => s.id !== subtaskId),
-    }));
-
-    this.subtaskService.deleteSubtask(subtaskId).subscribe({
-      next: () => this.loadTasks(),
-      error: (err) => {
-        console.error('Delete subtask failed:', err);
-        this.loadTasks();
-      },
-    });
+  completeSubtask(s: Subtask) {
+    this.facade.toggleSubtaskComplete(s.id).subscribe();
+  }
+  deleteSubtask(id: string) {
+    this.facade.deleteSubtask(id).subscribe();
   }
 }
