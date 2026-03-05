@@ -17,15 +17,15 @@ export class TaskService {
     return this.http.post<Task>(this.baseUrl, task);
   }
 
-  updateTask(id: number, task: Partial<Task>) {
+  updateTask(id: string, task: Partial<Task>) {
     return this.http.put<Task>(`${this.baseUrl}/${id}`, task);
   }
 
-  markTaskComplete(id: number){
+  markTaskComplete(id: string){
     return this.http.patch<Task>(`${this.baseUrl}/${id}/complete`, {});
   }
 
-  deleteTask(id: number) {
-    return this.http.delete(`${this.baseUrl}/${id}`);
+  deleteTask(id: string) {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 }

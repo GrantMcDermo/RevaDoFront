@@ -10,19 +10,19 @@ export class SubtaskService {
 
   constructor(private http: HttpClient) {}
 
-  getSubtasks(taskId: number) {
-    return this.http.get<Subtask[]>(`${this.baseUrl}/task/${taskId}`);
+  createSubtask(taskId: string, payload: { title: string; description: string }) {
+    return this.http.post<Subtask>(`${this.baseUrl}/task/${taskId}`, payload);
   }
 
-  createSubtask(taskId: number, subtask: Partial<Subtask>) {
-    return this.http.post<Subtask>(`${this.baseUrl}/${taskId}`, subtask);
-  }
-
-  updateSubtask(id: number, subtask: Partial<Subtask>) {
+  updateSubtask(id: string, subtask: Partial<Subtask>) {
     return this.http.put<Subtask>(`${this.baseUrl}/${id}`, subtask);
   }
 
-  deleteSubtask(id: number) {
-    return this.http.delete(`${this.baseUrl}/${id}`);
+  markComplete(id: string) {
+    return this.http.patch<Subtask>(`${this.baseUrl}/${id}/complete`, {});
+  }
+
+  deleteSubtask(id: string) {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
   }
 }

@@ -19,29 +19,100 @@
 @for (task of tasks; track task.id) {
 
   <!-- Display Mode -->
-  @if (editingTaskId !== task.id) {
-    <div>
+  @if (editingTaskId() !== task.id) {
+    <div style="margin-bottom: 1rem;">
       <h3 [style.text-decoration]="task.completed ? 'line-through' : 'none'">
         {{ task.title }}
       </h3>
 
       <p>{{ task.description }}</p>
 
-      <button (click)="toggleComplete(task)">
+      <button type="button" (click)="toggleComplete(task); $event.stopPropagation()">
         {{ task.completed ? 'Undo' : 'Complete' }}
       </button>
 
-      <button (click)="startEdit(task)">Edit</button>
-      <button (click)="deleteTask(task.id)">Delete</button>
+      <button type="button" (click)="startEdit(task); $event.stopPropagation()">Edit</button>
+      <button type="button" (click)="deleteTask(task.id); $event.stopPropagation()">Delete</button>
+      <div style="margin-top: 0.75rem; padding-left: 1rem;">
+        <h4>Subtasks</h4>
+
+        @if (task.subtasks?.length) {
+          <ul>
+            @for (s of task.subtasks; track s.id) {
+              <li>
+                @if (editingSubtaskId() !== s.id) {
+                  <span [style.text-decoration]="s.completed ? 'line-through' : 'none'">
+                    {{s.title}} - {{s.description}}
+                  </span>
+
+                  <button type="button" (click)="completeSubtask(s); $event.stopPropagation()">
+                    {{s.completed ? 'Undo' : 'Complete'}}
+                  </button>
+
+                  <button type="button" (click)="startEditSubtask(s); $event.stopPropagation()">
+                    Edit
+                  </button>
+
+                  <button type="button" [disabled]="s.id.startsWith('temp-')" (click)="deleteSubtask(s.id)">
+                    Delete
+                  </button>
+                }
+
+                @if (editingSubtaskId() === s.id) {
+                  <div>
+                    <label [for]="'editSubTitle-' + s.id">Title</label>
+                    <input [id]="'editSubTitle-' + s.id"
+                    [name]="'editSubTitle-' + s.id"
+                    [(ngModel)]="editSubtaskTitle"
+                    placeholder="Edit subtask title">
+
+                    <label [for]="'editSubDesc-' + s.id">Description</label>
+                    <input [id]="'editSubDesc-' + s.id"
+                      [name]="'editSubDesc-' + s.id"
+                      [(ngModel)]="editSubtaskDescription"
+                      placeholder="Edit subtask description">
+
+                    <button type="button" (click)="saveEditSubtask(s); $event.stopPropagation()">Save</button>
+                    <button type="button" (click)="cancelEditSubtask(); $event.stopPropagation()">Cancel</button>
+                  </div>
+                }
+              </li>
+            }
+          </ul>
+        } @else {
+          <p>No Subtasks yet.</p>
+        }
+
+        <div style="margin-top: 0.5rem;">
+          <label [for]="'subTitle-' + task.id">Title</label>
+          <input type="text" [id]="'subTitle-' + task.id" [name]="'subTitle-' + task.id"
+          [(ngModel)]="newSubtaskTitle[task.id]"
+          placeholder="Subtask title">
+
+          <label [for]="'subDesc-' + task.id">Description</label>
+          <input
+            type="text"
+            [id]="'subDesc-' + task.id"
+            [name]="'subDesc-' + task.id"
+            [(ngModel)]="newSubtaskDescription[task.id]"
+            placeholder="Subtask description"
+          />
+
+          <button type="button" [disabled]="creatingSubtaskForTaskIds.has(task.id)" (click)="createSubtask(task)">
+            Add Subtask
+          </button>
+        </div>
+      </div>
     </div>
   }
 
   <!-- Edit Mode -->
-  @if (editingTaskId === task.id) {
-    <div>
+  @if (editingTaskId() === task.id) {
+    <div style="margin-bottom: 1rem;">
       <label [for]="'editTitle-' + task.id">Title</label>
       <input
         [id]="'editTitle-' + task.id"
+        [name]="'editTitle-' + task.id"
         [(ngModel)]="editTitle"
         placeholder="Edit title"
       >
@@ -49,12 +120,13 @@
       <label [for]="'editDesc-' + task.id">Description</label>
       <input
         [id]="'editDesc-' + task.id"
+        [name]="'editDesc-' + task.id"
         [(ngModel)]="editDescription"
         placeholder="Edit description"
       >
 
-      <button (click)="saveEdit(task)">Save</button>
-      <button (click)="cancelEdit()">Cancel</button>
+      <button type="button" (click)="saveEdit(task); $event.stopPropagation()">Save</button>
+      <button type="button" (click)="cancelEdit(); $event.stopPropagation()">Cancel</button>
     </div>
   }
 

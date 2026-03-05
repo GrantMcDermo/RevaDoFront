@@ -1,7 +1,6 @@
 export interface Subtask {
-  id: number;
+  id: string;
   title: string;
   description: string;
   completed: boolean;
-  taskId: number;
 }
